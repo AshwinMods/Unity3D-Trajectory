@@ -24,7 +24,15 @@ public class Util_Trajectory : MonoBehaviour
             pathVertList = new List<Vector3>();
         }
 
-        pathVertList.Clear();
+        if (pathVertList.Count > splits)
+        {
+            pathVertList.RemoveRange(splits, (pathVertList.Count - splits));
+        }
+        else if(pathVertList.Count < splits)
+        {
+            pathVertList.AddRange(new Vector3[splits - pathVertList.Count]);
+        }
+
         float dt = 0;
         Vector3 d;
         for (int i = 0; i < splits; i++)
@@ -33,7 +41,7 @@ public class Util_Trajectory : MonoBehaviour
             d.x = Distance_AtVel_DueToAcc_InTime(velocity.x, acceleration.x, dt);
             d.y = Distance_AtVel_DueToAcc_InTime(velocity.y, acceleration.y, dt);
             d.z = Distance_AtVel_DueToAcc_InTime(velocity.z, acceleration.z, dt);
-            pathVertList.Add(d);
+            pathVertList[i] = d;
         }
     }
 
