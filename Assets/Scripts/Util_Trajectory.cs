@@ -166,6 +166,12 @@ public class Util_Trajectory : MonoBehaviour
     [SerializeField] bool fire = false;
     private void OnDrawGizmosSelected()
     {
+        time = Mathf.Max(0.001f, time);
+        dotTimeSpace = Mathf.Max(0.001f, dotTimeSpace);
+        dotDistSpace = Mathf.Max(0.001f, dotDistSpace);
+        dotCalcTimeStep = Mathf.Max(0.001f, dotCalcTimeStep);
+        splits = Mathf.Max(2, splits);
+
         if (calc_Trajectory || auto_calc)
         {
             calc_Trajectory = false;
