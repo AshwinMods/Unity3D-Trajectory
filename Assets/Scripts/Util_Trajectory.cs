@@ -7,6 +7,10 @@ public class Util_Trajectory : MonoBehaviour
     [Header("Continious Path")]
     [SerializeField] List<Vector3> pathVertList = new List<Vector3>();
     [SerializeField] float time = 1;
+
+    [Space]
+    [SerializeField] float launchMagnitude = 1f;
+    [SerializeField] float launchAngle = 45f;
     [SerializeField] Vector3 velocity = Vector3.right;
     [SerializeField] Vector3 acceleration = Vector3.down;
     [SerializeField] Vector3 unityAccuracyFix = Vector3.zero;
@@ -24,7 +28,6 @@ public class Util_Trajectory : MonoBehaviour
 
     [Space]
     [SerializeField] float pathLength = 0;
-    // Ut + .5 ATT
     public float Distance_AtVel_DueToAcc_InTime(float u, float a, float t)
     {
         return u * t + 0.5f * a * t * t;
@@ -110,7 +113,7 @@ public class Util_Trajectory : MonoBehaviour
                 }
             }
         }
-        else
+        else if(dotNum > 0)
         {
             bool usingPath = usePathforDots;
             int plIndx = 0;
@@ -164,31 +167,56 @@ public class Util_Trajectory : MonoBehaviour
 
     [Space]
     [SerializeField] bool fire = false;
+    float magChange = 0, angChange = 0;
+    Vector3 velChange = Vector3.zero;
     private void OnDrawGizmosSelected()
     {
+        if (magChange != launchMagnitude)
+        {
+            magChange = launchMagnitude;
+            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+        }
+        if (angChange != launchAngle)
+        {
+            angChange = launchAngle;
+            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+        }
+        if (velChange != velocity)
+        {
+            velChange = velocity;
+            launchMagnitude = velocity.magnitude;
+            launchAngle = Vector3.SignedAngle(Vector3.right, velocity, Vector3.forward);
+        }
+
         time = Mathf.Max(0.001f, time);
+        dotCount = Mathf.Max(0, dotCount);
         dotTimeSpace = Mathf.Max(0.001f, dotTimeSpace);
         dotDistSpace = Mathf.Max(0.001f, dotDistSpace);
         dotCalcTimeStep = Mathf.Max(0.001f, dotCalcTimeStep);
         splits = Mathf.Max(2, splits);
 
-        if (calc_Trajectory || auto_calc)
+        if (calc_Trajectory)
         {
-            calc_Trajectory = false;
+            if (!auto_calc)
+                calc_Trajectory = false;
             Calculate_Trajectory();
             lineRendere.positionCount = splits;
             lineRendere.SetPositions(pathVertList.ToArray());
         }
 
-        if (calc_Velocity || auto_calc)
+        if (calc_Velocity)
         {
-            calc_Velocity = false;
+            if (!auto_calc)
+                calc_Velocity = false;
             Calculate_Velocity(target.transform.position);
         }
 
-        if (calc_Dots || auto_calc)
+        if (calc_Dots)
         {
-            calc_Dots = false;
+            if (!auto_calc)
+                calc_Dots = false;
             Calculate_Dots();
         }
 
