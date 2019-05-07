@@ -11,6 +11,7 @@ public class Util_Trajectory : MonoBehaviour
     [Space]
     [SerializeField] float launchMagnitude = 1f;
     [SerializeField] float launchAngle = 45f;
+    [SerializeField] bool preferSmallAng = false;
     [SerializeField] Vector3 velocity = Vector3.right;
     [SerializeField] Vector3 acceleration = Vector3.down;
     [SerializeField] Vector3 unityAccuracyFix = Vector3.zero;
@@ -35,6 +36,38 @@ public class Util_Trajectory : MonoBehaviour
     public float Vel_ForDistance_DueToAcc_InTime(float d, float a, float t)
     {
         return (d - Distance_AtVel_DueToAcc_InTime(0, a, t)) / time;
+    }
+    public float Magnitude_ToReachXY_InGravity_AtAngle(float x, float y, float g, float ang)
+    {
+        float sin2Theta = Mathf.Sin(2 * ang * Mathf.Deg2Rad);
+        float cosTheta = Mathf.Cos(ang * Mathf.Deg2Rad);
+        float inner = (x * x * g) / (x * sin2Theta - 2 * y * cosTheta * cosTheta);
+        if (inner < 0)
+        {
+            return float.NaN;
+        }
+        float res = Mathf.Sqrt(inner);
+        return res;
+    }
+    public float Angle_ToReachXY_InGravity_AtMagnitude(float x, float y, float g, float mag)
+    {
+        float innerSq = Mathf.Pow(mag, 4) - g * (g * x * x + 2 * y * mag * mag);
+        if (innerSq < 0)
+        {
+            return float.NaN;
+        }
+        float innerATan;
+        if (preferSmallAng)
+        {
+            innerATan = (mag * mag - Mathf.Sqrt(innerSq)) / (g * x);
+        }
+        else
+        {
+            innerATan = (mag * mag + Mathf.Sqrt(innerSq)) / (g * x);
+        }
+         
+        float res = Mathf.Atan(innerATan) * Mathf.Rad2Deg;
+        return res;
     }
 
     public void Calculate_Trajectory()
@@ -162,6 +195,7 @@ public class Util_Trajectory : MonoBehaviour
     [Header("Editor Setting")]
     [SerializeField] bool calc_Trajectory = false;
     [SerializeField] bool calc_Velocity = false;
+    [SerializeField] bool calc_SuitalbeMagAng = false;
     [SerializeField] bool calc_Dots = false;
     [SerializeField] bool auto_calc = false;
 
@@ -173,16 +207,60 @@ public class Util_Trajectory : MonoBehaviour
     {
         if (magChange != launchMagnitude)
         {
-            magChange = launchMagnitude;
-            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            if (calc_SuitalbeMagAng)
+            {
+                float x = (target.position.x - transform.position.x);
+                float y = (target.position.y - transform.position.y);
+                float g = -acceleration.y;
+                float newAng = Angle_ToReachXY_InGravity_AtMagnitude(x, y, g, launchMagnitude);
+                if (float.IsNaN(newAng))
+                {
+                    launchMagnitude = magChange;
+                }
+                else
+                {
+                    magChange = launchMagnitude;
+                    launchAngle = newAng;
+                    velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                    velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                }
+            }
+            else
+            {
+                magChange = launchMagnitude;
+                velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            }
         }
+
         if (angChange != launchAngle)
         {
-            angChange = launchAngle;
-            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            if (calc_SuitalbeMagAng)
+            {
+                float x = (target.position.x - transform.position.x);
+                float y = (target.position.y - transform.position.y);
+                float g = -acceleration.y;
+                float newMag = Magnitude_ToReachXY_InGravity_AtAngle(x, y, g, launchAngle);
+                if (float.IsNaN(newMag))
+                {
+                    launchAngle = angChange;
+                }
+                else
+                {
+                    angChange = launchAngle;
+                    launchMagnitude = newMag;
+                    velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                    velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                }
+            }
+            else
+            {
+                angChange = launchAngle;
+                velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+                velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
+            }
         }
+
         if (velChange != velocity)
         {
             velChange = velocity;
@@ -230,11 +308,6 @@ public class Util_Trajectory : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (auto_calc)
-        {
-            OnDrawGizmosSelected();
-        }
-
         if (dotList != null)
         {
             for (int i = 0; i < dotList.Count; i++)
